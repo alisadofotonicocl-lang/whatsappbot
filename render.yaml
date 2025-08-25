@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: whatsapp-bot-web
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: npm install
+    startCommand: node index.js
+    autoDeploy: true
+    envVars:
+      - key: OPENAI_API_KEY     # Se agrega en el Dashboard. No se sincroniza desde el repo.
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
+      - key: BOT_PROMPT
+        value: Eres un asistente cordial, claro y conciso. Responde en español de Chile y ofrece ayuda práctica.
+      - key: ALLOWED_NUMBERS
+        value: ""
+      - key: ADMIN_TOKEN        # Opcional (para /admin). Si lo dejas vacío, /admin queda deshabilitado.
+        value: ""
+      - key: PORT               # Render la gestiona; dejamos un valor por defecto
+        value: "3000"
+      - key: NODE_VERSION
+        value: "20"
