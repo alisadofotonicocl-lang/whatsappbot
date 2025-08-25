@@ -1,24 +1,24 @@
+# render.yaml
 services:
   - type: web
     name: whatsapp-bot-web
     env: node
-    region: oregon
     plan: free
+    region: oregon            # opcional: usa tu región preferida
     buildCommand: npm install
     startCommand: node index.js
     autoDeploy: true
     envVars:
-      - key: OPENAI_API_KEY     # Se agrega en el Dashboard. No se sincroniza desde el repo.
+      - key: OPENAI_API_KEY   # la agregas en el Dashboard (no en el repo)
         sync: false
       - key: OPENAI_MODEL
         value: gpt-4o-mini
       - key: BOT_PROMPT
-        value: Eres un asistente cordial, claro y conciso. Responde en español de Chile y ofrece ayuda práctica.
+        value: Eres un asistente cordial, claro y conciso. Responde en español de Chile.
       - key: ALLOWED_NUMBERS
         value: ""
-      - key: ADMIN_TOKEN        # Opcional (para /admin). Si lo dejas vacío, /admin queda deshabilitado.
+      - key: ADMIN_TOKEN       # opcional; si lo dejas vacío, /admin queda deshabilitado
         value: ""
-      - key: PORT               # Render la gestiona; dejamos un valor por defecto
-        value: "3000"
       - key: NODE_VERSION
         value: "20"
+      # Render inyecta PORT automáticamente; no necesitas declararlo.
