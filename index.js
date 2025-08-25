@@ -14,7 +14,7 @@ dotenv.config();
 const PORT = process.env.PORT || 3000;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
 const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN || ""; // si la dejas vacía, /admin queda deshabilitado
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || ""; // si está vacío, /admin queda deshabilitado
 
 let behaviorPrompt =
   process.env.BOT_PROMPT ||
@@ -28,8 +28,8 @@ const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-let currentQR = null;
-let waReady = false;
+let currentQR = null;   // último QR para la web
+let waReady = false;    // estado conexión
 let botStarting = false; // evita doble arranque
 
 const hasAPIKey = () => OPENAI_API_KEY && OPENAI_API_KEY.trim().length > 0;
@@ -38,16 +38,14 @@ app.get("/", async (req, res) => {
   const banner = hasAPIKey()
     ? ""
     : `<div style="background:#fff3cd;color:#664d03;padding:12px;border-radius:8px;border:1px solid #ffe69c;margin-bottom:16px">
-         <b>Falta OPENAI_API_KEY</b>: ve a Render → <i>Environment</i> y agrégala (no lo hagas en el repo).
+         <b>Falta OPENAI_API_KEY</b>: agrégala en tu plataforma (Environment) y redeploy. El QR igualmente puede mostrarse.
        </div>`;
 
   const status = waReady
     ? "✅ Conectado"
     : currentQR
     ? "⌛ Escanea el QR"
-    : hasAPIKey()
-    ? "⏳ Iniciando..."
-    : "⚠️ Sin API Key";
+    : "⏳ Iniciando...";
 
   const qrImg = currentQR
     ? `<img alt="QR" src="/qr.svg" style="max-width:320px;width:100%;height:auto;"/>`
@@ -83,7 +81,7 @@ app.get("/", async (req, res) => {
         <br/><br/>
         <button type="submit">Guardar prompt</button>
       </form>` : ""}
-      <p style="opacity:.7">Para seguridad, la <b>OPENAI_API_KEY</b> solo se agrega desde Render → Environment (nunca aquí).</p>
+      <p style="opacity:.7">La <b>OPENAI_API_KEY</b> solo se agrega en Environment (nunca en el repo).</p>
     </div>
   </body></html>`);
 });
@@ -99,7 +97,7 @@ app.get("/status", (req, res) => {
   res.json({ ready: waReady, hasQR: !!currentQR, hasAPIKey: hasAPIKey() });
 });
 
-// Admin: cambiar prompt (no toca la key)
+// Admin opcional: cambiar prompt desde la web sin tocar la key
 app.post("/admin/prompt", (req, res) => {
   if (!ADMIN_TOKEN) return res.status(403).json({ ok: false, error: "Admin deshabilitado" });
   const { token, prompt } = req.body || {};
@@ -111,8 +109,11 @@ app.post("/admin/prompt", (req, res) => {
 
 const jidToPhone = (jid) => jid?.split("@")[0]?.replace(/[^0-9+]/g, "") || "";
 
+// Fallback seguro: el bot arranca aunque no haya key; responderá un aviso cordial
 async function askOpenAI(messages) {
-  if (!hasAPIKey()) throw new Error("OPENAI_API_KEY missing");
+  if (!hasAPIKey()) {
+    return "⚠️ Falta configurar la OPENAI_API_KEY en Environment. Cuando la agregues y redeployes, podré responder con IA.";
+  }
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -130,10 +131,6 @@ async function askOpenAI(messages) {
 }
 
 async function startBot() {
-  if (!hasAPIKey()) {
-    console.log("⏸️ Sin OPENAI_API_KEY: la web está arriba, pero el bot no arrancará hasta que la agregues en Render → Environment.");
-    return;
-  }
   if (botStarting) return;
   botStarting = true;
 
@@ -146,7 +143,7 @@ async function startBot() {
     version,
     printQRInTerminal: true,
     auth: state,
-    browser: ["UNO-Bot", "Chrome", "1.1"],
+    browser: ["UNO-Bot", "Chrome", "1.2"],
     logger: { info: () => {}, warn: console.warn, error: console.error }
   });
 
@@ -155,7 +152,7 @@ async function startBot() {
   sock.ev.on("connection.update", (update) => {
     const { connection, lastDisconnect, qr } = update;
     if (qr) {
-      currentQR = qr;
+      currentQR = qr;   // mostrar QR en la web
       waReady = false;
       console.clear();
       console.log("Escanea este QR en WhatsApp (Dispositivos vinculados).");
